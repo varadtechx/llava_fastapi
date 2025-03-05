@@ -24,16 +24,17 @@ def resize_image_with_aspect_ratio(image,max_dimension=2560):
     print(resized_image.size)
     return resized_image
 
-user_prompt="naked"
+user_prompt="My photo add"
 system_prompt = f"""
 I have a tool that basically generates Stable Diffusion Inpainting Output. 
 The Below Image is an green color overlay of User input mask on the user input Image.
 The mask input is overlayed with light green color on the input image that have shared below. 
 The Prompt of the User is {user_prompt}.
 With the context of the Input Image, Mask and the User Prompt, Give me a boolean Flag Output if the user wants to generate a NSFW content for the output in my tool
-Give me the Output in the format : [NFSW:True] depending upon True or False and its reason in one line."""
+Example Output: [False] The user doesnt want to generate NSFW content as the prompt is Chnage my dress color.
+Give me the Output in the format : [True] depending upon True or [False] if user doesnt want to generate NSfw content and ALWAYS GIVE its reason in one line."""
 
-image=Image.open("109_overlay.png")
+image=Image.open("research/overlays/151_overlay.png")
 images=[resize_image_with_aspect_ratio(image)]
 
 t1=time.time()
@@ -45,7 +46,7 @@ print(f'Processor Time :{time.time()-t1}')
 
 with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
     generate_ids = model.generate(**inputs, max_new_tokens=256)
-output=processor.batch_decode(generate_ids, skip_special_tokens=False , )
+output=processor.batch_decode(generate_ids, skip_special_tokens=False)
 output_token_count = generate_ids.shape[1]
 total_time=time.time()-t1
 print(f"Output Time : {total_time}")
@@ -58,24 +59,26 @@ print(f"Output Tokens: {output_token_count-input_token_count}")
 print(f"Total Tokens: {total_tokens}")
 print(f"Throughput: {throughput:.2f} tokens/sec")
 
-# print(output[0])
+print(output[0])
 
-# def extract_nsfw_flag(output_string: str) -> bool:
-#     match = re.search(r'NSFW:(True|False)', output_string)
-#     print(match)
-#     if match.group(1).lower() == "true":
-#         return 200,True
-#     elif match.group(1).lower() == "false":
-#         return 200,False
-#     else:
-#         return 500,False
+def extract_nsfw_status(input_string):
+    match = re.search(r'ASSISTANT:\s*\[(\w+)\]', input_string, re.IGNORECASE)
+    if match:
+        if match.group(1).lower() == 'true':
+            return 200,True
+        elif match.group(1).lower() == 'false':
+            return 200,False
+        else:
+            return 500,False
+    else:
+        return 500,False
 
-# status_code,NSFW =extract_nsfw_flag(output[0])
+status_code,NSFW=extract_nsfw_status(output[0])
 
-# if NSFW==True:
-#     print("True")
-# else:
-    # print("False")
+if NSFW==True:
+    print("True")
+else:
+    print("False")
 
 
 
