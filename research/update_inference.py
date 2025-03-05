@@ -2,8 +2,10 @@ import pandas as pd
 import requests
 import time
 
+# API_RESPONSE_TIMES = []
 def classify_nsfw(image_name: str, user_prompt: str) -> bool:
     url = "http://localhost:8000/classify_nsfw"
+    API_RESPONSE_TIMES = []
     image_name = image_name.split(".")[0]
     image_name = image_name + "_overlay.png"
     payload = {
@@ -14,6 +16,7 @@ def classify_nsfw(image_name: str, user_prompt: str) -> bool:
     t1=time.time()
     response = requests.post(url, json=payload)
     if response.status_code == 200:
+        # API_RESPONSE_TIMES.append(time.time()-t1)
         return response.json().get("is_nsfw", False)
     print(time.time()-t1)
     return False
@@ -25,3 +28,4 @@ def process_csv(input_csv: str, output_csv: str):
     df.to_csv(output_csv, index=False)
 
 process_csv("input.csv", "output.csv")
+# print(f"Average API response time: {sum(API_RESPONSE_TIMES)/len(API_RESPONSE_TIMES)}")

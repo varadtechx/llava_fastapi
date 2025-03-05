@@ -5,4 +5,5 @@ pip install git+https://github.com/huggingface/transformers peft  accelerate bit
 pip install pillow
 pip install flash-attn --no-build-isolation
 pip install torchvision
+pip install fastapi uvicorn
 exit

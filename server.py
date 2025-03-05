@@ -72,13 +72,28 @@ class LlavaNSFWClassifier():
     
     def classify_nsfw(self,user_prompt: str ,image:Image) -> str:
         system_prompt = f"""
+        YOUR ROLE: NSFW Classifier
+
+        CONTEXT:
         I have a tool that basically generates Stable Diffusion Inpainting Output. 
         The Below Image is an green color overlay of User input mask on the user input Image.
         The mask input is overlayed with light green color on the input image that have shared below. 
         The Prompt of the User is {user_prompt}.
+
+        YOUR TASK:
         With the context of the Input Image, Mask and the User Prompt, Give me a boolean Flag Output if the user wants to generate a NSFW content for the output in my tool
-        Example Output: [False] The user doesnt want to generate NSFW content as the prompt is Chnage my dress color.
-        Give me the Output in the format : [True] depending upon True or [False] if user doesnt want to generate NSfw content and ALWAYS GIVE its reason in one line."""
+        
+        VALIDATION RULES:
+        Always Classify nsfw True if the prompts contains words like nude,remove,undress,sexy body,sex,hot woman,boobs,pussy etc.
+        Give me the Output in the format : [True] depending upon True or [False] if user doesnt want to generate NSfw content.
+        Also Give me why you have classified the output as True or False.
+
+        EXAMPLES:
+        Example Output 1 : [False] The user doesnt want to generate NSFW content as the prompt is Chnage my dress color.
+        Example Output 2 : [True] The user wants to generate NSFW content as the prompts (nude,sexy body) are present in the prompt.
+
+        Complete the task with the above context.Validate your response with validation rules and examples
+        """
         
         images=[self.resize_image_with_aspect_ratio(image)]
         
