@@ -1,4 +1,7 @@
 llava-venv
 __pycache__/*
 research/overlays/*
+research/benchmarks/overlays/*
+research/benchmarks/overlays
+research/benchmarks/report/*
 logs/*
