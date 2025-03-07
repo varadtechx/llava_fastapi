@@ -2,7 +2,7 @@ import pandas as pd
 import requests
 import time
 
-# API_RESPONSE_TIMES = []
+API_RESPONSE_TIMES = time.time()
 def classify_nsfw(image_name: str, user_prompt: str) -> bool:
     url = "http://localhost:8000/classify_nsfw"
     API_RESPONSE_TIMES = []
@@ -24,8 +24,11 @@ def classify_nsfw(image_name: str, user_prompt: str) -> bool:
 def process_csv(input_csv: str, output_csv: str):
     required_columns = ["image_name", "user_prompt", "is_nsfw", "overlay_path"]
     df = pd.read_csv(input_csv)
-    df["detected_nsfw"] = df.apply(lambda row: classify_nsfw(row["image_name"], row["user_prompt"]), axis=1)
-    df.to_csv(output_csv, index=False)
 
-process_csv("nsfw265.csv", "output.csv")
-# print(f"Average API response time: {sum(API_RESPONSE_TIMES)/len(API_RESPONSE_TIMES)}")
+    #only take first 10 rows
+    df = df.head(10)
+    df["detected_nsfw"] = df.apply(lambda row: classify_nsfw(row["image_name"], row["user_prompt"]), axis=1)
+    # df.to_csv(output_csv, index=False)
+
+process_csv("nsfw-data-benchmark.csv", "test.csv")
+print(f"Average API response time: {time.time()-API_RESPONSE_TIMES/10}")

@@ -1,10 +1,9 @@
 python3 -m venv llava-venv
 source llava-venv/bin/activate
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-pip install git+https://github.com/huggingface/transformers peft  accelerate bitsandbytes safetensors sentencepiece optimum fsspec==2024.10.0
-pip install pillow
+cd llava_fastapi
 pip install wheel
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+pip install git+https://github.com/huggingface/transformers 
 pip install flash-attn --no-build-isolation
-# pip install torchvision
-pip install fastapi uvicorn
-exit
+pip install -r requirements.txt
+

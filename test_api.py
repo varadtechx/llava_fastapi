@@ -5,7 +5,7 @@ def test_post_request():
     url = "http://localhost:8000/classify_nsfw"
     payload = {
         "order_id": "1234",
-        "image_path": "/root/llava_fastapi/research/109_overlay.png",
+        "image_path": "research/109_overlay.png",
         "user_prompt": "dancing person"
     }
     response = requests.post(url, json=payload)

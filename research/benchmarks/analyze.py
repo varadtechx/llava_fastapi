@@ -19,7 +19,7 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Not NSFW', 'NSF
 plt.xlabel('Predicted Label')
 plt.ylabel('True Label')
 plt.title('Confusion Matrix')
-plt.savefig('confusion_matrix_benchmark.png')
+plt.savefig('confusion_matrix_benchmark_qwen.png')
 plt.close()
 
 # Compute precision and recall
@@ -28,3 +28,21 @@ recall = recall_score(df['is_nsfw'], df['detected_nsfw'])
 
 print(f'Precision: {precision:.2f}')
 print(f'Recall: {recall:.2f}')
+
+
+import pandas as pd
+
+# Load the CSV file
+df = pd.read_csv("output.csv")
+
+# False Positives: detected_nsfw is True but is_nsfw is False
+false_positives = df[(df["detected_nsfw"] == True) & (df["is_nsfw"] == False)]
+
+# False Negatives: detected_nsfw is False but is_nsfw is True
+false_negatives = df[(df["detected_nsfw"] == False) & (df["is_nsfw"] == True)]
+
+# Save to separate CSV files
+false_positives.to_csv("false_positives.csv", index=False)
+false_negatives.to_csv("false_negatives.csv", index=False)
+
+print("False positive and false negative CSVs created successfully.")
