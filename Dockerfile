@@ -1,20 +1,28 @@
-FROM nvidia/cuda:12.4.0-runtime-ubuntu20.04
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
-ENV DEBIAN_FRONTEND=noninteractive
-WORKDIR /app
+ENV DEBIAN_FRONTEND=noninteractive \
+    VENV_DIR=/opt/llava-venv \
+    APP_DIR=/opt/llava_fastapi
 
 RUN apt-get update && apt-get install -y \
-    python3-pip python3-dev git && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    python3-venv \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
-RUN pip3 install --upgrade pip wheel && \
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 && \
-    pip3 install git+https://github.com/huggingface/transformers && \
-    pip3 install flash-attn --no-build-isolation && \
-    pip3 install -r requirements.txt
+RUN python3 -m venv $VENV_DIR
+ENV PATH="$VENV_DIR/bin:$PATH"
 
-COPY . .
+WORKDIR $APP_DIR
+
+RUN pip install --upgrade pip wheel \
+    && pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 \
+    && pip install git+https://github.com/huggingface/transformers \
+    && pip install flash-attn --no-build-isolation
+
+COPY . $APP_DIR/
+
+RUN pip install -r requirements.txt
 
 RUN python3 initialize.py
 
