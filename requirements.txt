@@ -9,3 +9,5 @@ pillow
 fastapi 
 uvicorn
 scikit-learn
+qwen_vl_utils
+opencv-python

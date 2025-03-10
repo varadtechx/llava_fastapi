@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI , Depends, HTTPException, status, Request, Header
 from pydantic import BaseModel
 import requests
 import time
@@ -10,6 +10,8 @@ from logging.handlers import RotatingFileHandler
 import re
 
 from PIL import Image
+import cv2
+import numpy as np
 import torch
 from torch.nn.attention import SDPBackend, sdpa_kernel
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
@@ -31,14 +33,16 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 app = FastAPI()
+AUTH_KEY = "Basic ndedsi2i323rfwffqtdednondwnns"
 
 class Request(BaseModel):
-    order_id: int
+    order_id: str
     user_prompt: str
-    image_path: str
+    image_url: str
+    mask_url: str
 
 class Response(BaseModel):
-    order_id: int
+    order_id: str
     is_nsfw: bool
     order_status_code: int
     nsfw_reason: str
@@ -59,7 +63,7 @@ class QwenNSFWClassifier():
         )
         logger.info("[INFO] Qwen2.5-VL Model and Processor Loaded.")
     
-    def resize_image_with_aspect_ratio(self, image, max_dimension=512):
+    def resize_image_with_aspect_ratio(self, image : Image, max_dimension=512):
         width, height = image.size
         aspect_ratio = width / height
         if width > height:
@@ -137,14 +141,7 @@ class QwenNSFWClassifier():
 
         The User input prompt is: {user_prompt}
         """
-
-        # Prepare the image
-        image = self.resize_image_with_aspect_ratio(image)
-        print(image.size)
-        
-        t1 = time.time()
-        
-        # Create messages format for Qwen
+        # print(image.size)
         messages = [
             {
                 "role": "user",
@@ -157,8 +154,6 @@ class QwenNSFWClassifier():
                 ],
             }
         ]
-        
-        # Prepare for inference
         text = self.processor.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
@@ -171,9 +166,6 @@ class QwenNSFWClassifier():
             return_tensors="pt",
         ).to(self.model.device, torch.bfloat16)
         
-        processor_time = time.time() - t1
-        logger.info(f"Processor time: {processor_time}")
-        
         # Using flash attention sdpa_kernel for optimal performance
         with sdpa_kernel(SDPBackend.FLASH_ATTENTION):
             generated_ids = self.model.generate(**inputs, max_new_tokens=128)
@@ -184,11 +176,7 @@ class QwenNSFWClassifier():
         output_text = self.processor.batch_decode(
             generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )[0]
-        
-        total_time = time.time() - t1
-        logger.info(f"Total inference time: {total_time}")
         logger.info(f"Model output: {output_text}")
-        
         return output_text
 
     def extract_nsfw_status(self, input_string):
@@ -212,19 +200,47 @@ class QwenNSFWClassifier():
             logger.error(f"Error extracting NSFW status: {e}")
             return 500, False, f"Error parsing classifier output: {e}"
 
+    def apply_mask(self, image_pil: Image, mask_pil: Image):
+        if image_pil.mode == 'RGBA':
+            image_pil = image_pil.convert('RGB')
+        image = np.array(image_pil)
+        mask = np.array(mask_pil.convert('L'))
+        if image.shape[:2] != mask.shape[:2]:
+            mask = cv2.resize(mask, (image.shape[1], image.shape[0]))
+        binary_mask = np.where(mask > 240, 255, 0).astype(np.uint8)
+        mask_indices = binary_mask > 0
+        result = image.copy()
+        if np.any(mask_indices):
+            result[mask_indices] = (
+                result[mask_indices] * (1 - 0.3) + 
+                np.array([0, 255, 128])[None, None, :] * 0.3
+            ).astype(np.uint8)
+        return Image.fromarray(result)
+
     def classify(self, request: Request):
+        t1 = time.time()
         try:
-            image = self.load_image(request.image_path)
+            image = self.load_image(request.image_url)
+            mask = self.load_image(request.mask_url)
+            image = self.resize_image_with_aspect_ratio(image)
+            mask = self.resize_image_with_aspect_ratio(mask)
+            logger.info(f"Image and Mask From URL Time :{time.time()-t1}")
         except Exception as e:
             logger.error(f"Error while loading image: {e}")
-            return 500, False, f"Error loading image: {e}"
+            reason="Nil"
+            return 500, False, reason ,f"Error loading image: {e}"
         
         try:
-            output_text = self.classify_nsfw(request.user_prompt, image)
+            overlayed = self.apply_mask(image,mask)
+            logger.info(f"Apply Mask Overlay Function Time:{time.time()-t1}")
+            print(f"Apply Mask Overlay Function Time:{time.time()-t1}")
+            output_text = self.classify_nsfw(request.user_prompt, overlayed)
             status_code, is_nsfw, reason = self.extract_nsfw_status(output_text)
             
             if status_code == 200:
                 message = f"NSFW Classification Completed: {'NSFW' if is_nsfw else 'Safe'}"
+                print(f"Total Inference Time :{time.time()-t1}")
+                logger.info(f"Total Inference Time :{time.time()-t1}")
                 return status_code, is_nsfw, reason, message
             else:
                 return status_code, False, reason,"NSFW Classification Failed"
@@ -236,11 +252,25 @@ class QwenNSFWClassifier():
 # Initialize the classifier
 qwen_nsfw_classifier = QwenNSFWClassifier()
 
+async def verify_api_key(x_api_key: str = Header(None)):
+    """Verify the API key provided in the X-API-Key header."""
+    if x_api_key is None or x_api_key != AUTH_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API Key"
+        )
+    return x_api_key
+
+@app.get("/")
+def server_status(api_key: str = Depends(verify_api_key)):
+    return {"status": "running", "message": "Server is up and running"}
+
 @app.post("/classify_nsfw")
-async def classify_nsfw(request: Request):
+async def classify_nsfw(request: Request, api_key: str = Depends(verify_api_key)):
     logger.info(f"Received Request for order_id {request.order_id}: {request}")
-    status_code, is_nsfw,reason,order_response_message = qwen_nsfw_classifier.classify(request)
+    status_code, is_nsfw, reason, order_response_message = qwen_nsfw_classifier.classify(request)
     logger.info(f"Response for order_id {request.order_id}: {is_nsfw}, {status_code}, {order_response_message}")
+    
     return Response(
         order_id=request.order_id, 
         is_nsfw=is_nsfw, 

@@ -6,4 +6,6 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 pip install git+https://github.com/huggingface/transformers 
 pip install flash-attn --no-build-isolation
 pip install -r requirements.txt
+python3 initialize.py 
+python3 server_qwen.py
 
