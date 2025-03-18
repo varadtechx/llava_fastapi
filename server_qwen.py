@@ -97,7 +97,7 @@ class QwenNSFWClassifier():
 
         Step-by-Step Reasoning:  
         **Step 1: Prompt Analysis**  
-        - If the user prompt contains explicit words such as ("nude", "undress", "sexy body", "hot woman", "boobs", "pussy", "sex", etc.), classify as [True].
+        - If the user prompt contains explicit words such as ("nude", "undress", "sexy body", "hot woman", "boobs", "pussy", "sex", "dick","penis","vagina","naked men", etc.), classify as [True].
         - If the user prompt contains words like "discard", "remove", "delete", "discard selected item", "replace with nothing", etc., check the masked area and if the masked area is on private body parts, classify as [True] else classify as [False].
         - If the prompt is innocent (e.g., "change dress color"), proceed to Step 2.  
 
