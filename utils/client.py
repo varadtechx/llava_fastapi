@@ -6,7 +6,7 @@ def nsfw_classifier(order_id:str,image_url : str , mask_url: str, user_prompt:st
         "X-API-Key": AUTH_KEY,
         "Content-Type": "application/json"
     }
-    nsfw_url = "http://3.17.17.238:8110/classify_nsfw"
+    nsfw_url = "http://localhost:8000/classify_nsfw"
     payload = {
         'image_url': image_url, 
         'mask_url' : mask_url,

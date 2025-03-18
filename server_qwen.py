@@ -97,7 +97,8 @@ class QwenNSFWClassifier():
 
         Step-by-Step Reasoning:  
         **Step 1: Prompt Analysis**  
-        - If the user prompt contains explicit words such as ("nude", "remove", "undress", "sexy body", "hot woman", "boobs", "pussy", "sex", etc.), classify as [True].  
+        - If the user prompt contains explicit words such as ("nude", "undress", "sexy body", "hot woman", "boobs", "pussy", "sex", etc.), classify as [True].
+        - If the user prompt contains words like "discard", "remove", "delete", "discard selected item", "replace with nothing", etc., check the masked area and if the masked area is on private body parts, classify as [True] else classify as [False].
         - If the prompt is innocent (e.g., "change dress color"), proceed to Step 2.  
 
         **Step 2: Image & Mask Analysis**  
@@ -133,6 +134,16 @@ class QwenNSFWClassifier():
         User Prompt: "Make me naked."  
         Masked Area: Covers the entire body.  
         Classification: [True, Reason:"Full-body nudity requested in prompt."]  
+
+        Example 5
+        User Prompt: "discard selected item and replace with nothing"
+        Masked Area: Covers the chest area.
+        Classification: [True, Reason:"Explicit request to remove clothing on chest."]
+
+        Example 6
+        User Prompt: "discard selected item and replace with nothing"
+        Masked Area: Does not cover any private body parts.
+        Classification: [False, Reason:"Nil"]
 
         **FINAL INSTRUCTIONS:**  
         - Only provide a reason if classification is [True], limited to 10 words.  
